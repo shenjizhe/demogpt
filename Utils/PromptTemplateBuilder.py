@@ -4,16 +4,18 @@ import tempfile
 from typing import Optional, List
 
 from langchain.tools.render import render_text_description
-from langchain_core.output_parsers import BaseOutputParser
+from langchain_core.output_parsers import BaseOutputParser, PydanticOutputParser
 from langchain_core.prompts import load_prompt, BasePromptTemplate, PipelinePromptTemplate
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, Tool
+
+from AutoAgent.Action import Action
 
 
 def _load_file(filename):
     """ Loads a file into a string."""
     if not os.path.exists(filename):
         raise FileExistsError(f"File {filename} not found.")
-    f = os.path.abspath(filename, "r", encoding="utf8")
+    f = open(filename, 'r', encoding='utf-8')
     s = f.read()
     f.close()
     return s
@@ -54,7 +56,7 @@ class PromptTemplateBuilder:
         partial_variables = {}
         recursive_templates = []
 
-        # 遍历所有变量，检查是否存在对应的末班文件
+        # 遍历所有变量，检查是否存在对应的模板文件
         for var in variables:
             # 是否存在嵌套模板
             if os.path.exists(os.path.join(self.prompt_path, f"{var}.json")):
@@ -78,7 +80,7 @@ class PromptTemplateBuilder:
 
         if output_parser is not None and "format_instructions" in variables:
             partial_variables["format_instructions"] = _chinese_friendly(
-                output_parser.format_instructions
+                output_parser.get_format_instructions()
             )
 
         if recursive_templates:
@@ -86,6 +88,10 @@ class PromptTemplateBuilder:
                 final_prompt=main_prompt_template,
                 pipeline_prompt=recursive_templates
             )
+        # 将有值的变量填充到模板中
+        main_prompt_template = main_prompt_template.partial(**partial_variables)
+
+        return main_prompt_template
 
     def _check_or_redirect(self, prompt_file):
         """ if you use a relative path, it will be redirected to an absolute path"""
@@ -108,3 +114,17 @@ class PromptTemplateBuilder:
                 tmp_file.close()
                 return tmp_file.name
         return prompt_file
+
+
+if __name__ == "__main__":
+    builder = PromptTemplateBuilder("../prompts/main", "main.json")
+    output_parser = PydanticOutputParser(pydantic_object=Action)
+    prompt_template = builder.build(tools=[
+        Tool(name="FINISH", func=lambda: None, description="任务完成")
+    ], output_parser=output_parser)
+    print(prompt_template.format(
+        task_description="解决问题",
+        work_dir=".",
+        short_term_memory="",
+        long_term_memory="",
+    ))
