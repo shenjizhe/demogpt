@@ -40,59 +40,6 @@ class PromptTemplateBuilder:
         self.prompt_path = prompt_path
         self.prompt_file = prompt_file
 
-    def build(
-            self,
-            tools: Optional[List[BaseTool]] = None,
-            output_parser: Optional[BaseOutputParser] = None
-    ) -> BasePromptTemplate:
-        """ Builds a prompt template. from tools & output parser """
-
-        main_file = os.path.join(self.prompt_path, self.prompt_file)
-        main_prompt_template = load_prompt(
-            self._check_or_redirect(main_file)
-        )
-
-        variables = main_prompt_template.input_variables
-        partial_variables = {}
-        recursive_templates = []
-
-        # 遍历所有变量，检查是否存在对应的模板文件
-        for var in variables:
-            # 是否存在嵌套模板
-            if os.path.exists(os.path.join(self.prompt_path, f"{var}.json")):
-                sub_template = PromptTemplateBuilder(
-                    self.prompt_path,
-                    f"{var}.json"
-                ).build(
-                    tools=tools,
-                    output_parser=output_parser
-                )
-                recursive_templates.append(var, sub_template)
-            elif os.path.exists(os.path.join(self.prompt_path, f"{var}.txt")):
-                var_str = _load_file(
-                    os.path.join(self.prompt_path, f"{var}.txt")
-                )
-                partial_variables[var] = var_str
-
-        if tools is not None and "tools" in variables:
-            tools_prompt = render_text_description(tools)
-            partial_variables["tools"] = tools_prompt
-
-        if output_parser is not None and "format_instructions" in variables:
-            partial_variables["format_instructions"] = _chinese_friendly(
-                output_parser.get_format_instructions()
-            )
-
-        if recursive_templates:
-            main_prompt_template = PipelinePromptTemplate(
-                final_prompt=main_prompt_template,
-                pipeline_prompt=recursive_templates
-            )
-        # 将有值的变量填充到模板中
-        main_prompt_template = main_prompt_template.partial(**partial_variables)
-
-        return main_prompt_template
-
     def _check_or_redirect(self, prompt_file):
         """ if you use a relative path, it will be redirected to an absolute path"""
 
@@ -115,13 +62,66 @@ class PromptTemplateBuilder:
                 return tmp_file.name
         return prompt_file
 
+    def build(
+            self,
+            tools: Optional[List[BaseTool]] = None,
+            parser: Optional[BaseOutputParser] = None
+    ) -> BasePromptTemplate:
+        """ Builds a prompt template. from tools & output parser """
+
+        main_file = os.path.join(self.prompt_path, self.prompt_file)
+        main_prompt_template = load_prompt(
+            self._check_or_redirect(main_file)
+        )
+
+        variables = main_prompt_template.input_variables
+        partial_variables = {}
+        recursive_templates = []
+
+        # 遍历所有变量，检查是否存在对应的模板文件
+        for var in variables:
+            # 是否存在嵌套模板
+            if os.path.exists(os.path.join(self.prompt_path, f"{var}.json")):
+                sub_template = PromptTemplateBuilder(
+                    self.prompt_path,
+                    f"{var}.json"
+                ).build(
+                    tools=tools,
+                    parser=parser
+                )
+                recursive_templates.append(var, sub_template)
+            elif os.path.exists(os.path.join(self.prompt_path, f"{var}.txt")):
+                var_str = _load_file(
+                    os.path.join(self.prompt_path, f"{var}.txt")
+                )
+                partial_variables[var] = var_str
+
+        if tools is not None and "tools" in variables:
+            tools_prompt = render_text_description(tools)
+            partial_variables["tools"] = tools_prompt
+
+        if parser is not None and "format_instructions" in variables:
+            partial_variables["format_instructions"] = _chinese_friendly(
+                parser.get_format_instructions()
+            )
+
+        if recursive_templates:
+            main_prompt_template = PipelinePromptTemplate(
+                final_prompt=main_prompt_template,
+                pipeline_prompt=recursive_templates
+            )
+        # 将有值的变量填充到模板中
+        main_prompt_template = main_prompt_template.partial(**partial_variables)
+
+        return main_prompt_template
+
 
 if __name__ == "__main__":
     builder = PromptTemplateBuilder("../prompts/main", "main.json")
     output_parser = PydanticOutputParser(pydantic_object=Action)
     prompt_template = builder.build(tools=[
         Tool(name="FINISH", func=lambda: None, description="任务完成")
-    ], output_parser=output_parser)
+    ], parser=output_parser)
     print(prompt_template.format(
         task_description="解决问题",
         work_dir=".",
