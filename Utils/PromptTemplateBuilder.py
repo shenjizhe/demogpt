@@ -3,8 +3,9 @@ import os
 import tempfile
 from typing import Optional, List
 
+from langchain.output_parsers import PydanticOutputParser
 from langchain.tools.render import render_text_description
-from langchain_core.output_parsers import BaseOutputParser, PydanticOutputParser
+from langchain_core.output_parsers import BaseOutputParser
 from langchain_core.prompts import load_prompt, BasePromptTemplate, PipelinePromptTemplate
 from langchain_core.tools import BaseTool, Tool
 
