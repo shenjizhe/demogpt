@@ -17,6 +17,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# !pip install ansi_escape
+# !pip install colorama
 import sys
 
 from colorama import Fore, Style
