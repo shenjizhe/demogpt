@@ -44,7 +44,8 @@ def main():
 
     # 语言模型
     llm = ChatOpenAI(
-        model="gpt-4-1106-preview",
+        model="gpt-3.5-turbo",
+        # model="gpt-4-1106-preview",
         temperature=0,
         model_kwargs={
             "seed": 42
