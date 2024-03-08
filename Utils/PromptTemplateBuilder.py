@@ -85,7 +85,7 @@ class PromptTemplateBuilder:
                 return tmp_file.name
         return prompt_file
 
-    def build(
+    def  build(
             self,
             tools: Optional[List[BaseTool]] = None,
             parser: Optional[BaseOutputParser] = None
