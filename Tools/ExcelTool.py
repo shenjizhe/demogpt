@@ -47,7 +47,7 @@ def get_column_names(
     return result
 
 
-def get_n_rows(
+def get_first_n_rows(
         file_name,
         sheet_index: int = 0,
         n: int = 3,
@@ -71,5 +71,5 @@ if __name__ == '__main__':
     file_name = "../data/供应商名录.xlsx"
     color_print(get_sheet_names(file_name))
     color_print(get_column_names(file_name))
-    color_print(get_n_rows(file_name))
-    color_print(get_n_rows(file_name, n=5))
+    color_print(get_first_n_rows(file_name))
+    color_print(get_first_n_rows(file_name, n=5))
